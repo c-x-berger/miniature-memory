@@ -66,6 +66,11 @@ dependencies = [
 [[package]]
 name = "client"
 version = "0.1.0"
+dependencies = [
+ "common",
+ "ed25519-dalek",
+ "rand",
+]
 
 [[package]]
 name = "common"

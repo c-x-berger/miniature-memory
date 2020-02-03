@@ -1,5 +1,9 @@
+#![feature(try_trait)]
+
+mod net;
 mod update;
 
+pub use net::{errors::*, Network};
 pub use update::UpdateMessage;
 
 #[cfg(test)]

@@ -26,8 +26,10 @@ fn main() {
     let update = UpdateMessage::new(
         66,
         nix_time.as_secs(),
-        "jimmyhendrix.ano",
-        "why.am.i.like.this",
+        "jimmyhendrix.ano".to_string(),
+        "why.am.i.like.this".to_string(),
+        None,
+        None,
     );
     match update {
         Ok(mut v) => {

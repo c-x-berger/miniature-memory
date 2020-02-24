@@ -1,4 +1,4 @@
-use std::{convert::TryInto, num::TryFromIntError, option::NoneError};
+use std::{convert::TryInto, option::NoneError};
 
 use ed25519_dalek::{Keypair, PublicKey, Signature};
 
@@ -47,16 +47,17 @@ impl UpdateMessage {
     }
 
     /// Sets this message's public key and signs it with the provided keypair.
-    pub fn sign(&mut self, key: &Keypair) -> Result<(), TryFromIntError> {
+    pub fn sign(&mut self, key: &Keypair) {
         let pub_key = key.public;
         self.public_key = Some(pub_key);
         let to_sign = &self.as_message();
         let sign = key.sign(to_sign);
         assert!(key.verify(to_sign, &sign).is_ok());
         self.signature = Some(sign);
-        Ok(())
     }
 
+    /// Checks if this update is validly signed.
+    ///
     /// - If: `self.key().is_some()` and `self.signature().is_some()`:
     ///   - If `signature` is valid for `self.as_message()` and `key`:
     ///     - Return `Ok(true)`
@@ -98,7 +99,7 @@ impl UpdateMessage {
         &self.value
     }
 
-    /// Return `true` is **present.** To check correctness, see [`correct_signature`].
+    /// Return `true` if a signature is **present.** To check correctness, see [`correct_signature`].
     ///
     /// [`correct_signature`]: struct.UpdateMessage.html#method.correct_signature
     pub fn is_signed(&self) -> bool {

@@ -39,8 +39,8 @@ impl Network for UpdateMessage {
         // when sending over network, big endian is standard for some reason
         buf.extend_from_slice(&u8::to_be_bytes(self.version()));
         // keys provide nice slice views but signatures -- which are larger -- don't
-        buf.extend_from_slice(self.key().unwrap().as_bytes());
-        buf.extend_from_slice(&self.signature().unwrap().to_bytes());
+        buf.extend_from_slice(self.key()?.as_bytes());
+        buf.extend_from_slice(&self.signature()?.to_bytes());
         // includes big-endian timestamp, label_s, label, value_s, value
         buf.extend_from_slice(&self.as_message());
         return Ok(buf);

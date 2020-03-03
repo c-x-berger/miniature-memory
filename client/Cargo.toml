@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 common = { path="../common" }
 rand = "0.7"
+structopt = "0.3"
 
 [dependencies.ed25519-dalek]
 version = "1.0.0-pre.3"

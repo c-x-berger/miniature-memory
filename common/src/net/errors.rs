@@ -52,7 +52,10 @@ impl From<io::Error> for NetErr {
 }
 
 impl From<NetErr> for io::Error {
-    fn from(error: NetErr) -> Self {
-        return io::Error::new(io::ErrorKind::Other, "NetErr raised from common");
+    fn from(e: NetErr) -> Self {
+        return io::Error::new(
+            io::ErrorKind::Other,
+            format!("NetErr raised from common: {:?}", e),
+        );
     }
 }

@@ -35,7 +35,7 @@ impl UpdateMessage {
         })
     }
 
-    /// Returned this message as it should have been serialized prior to signing.
+    /// Returns this message as it should have been serialized prior to signing.
     pub fn as_message(&self) -> Vec<u8> {
         let mut to_sign: Vec<u8> = self.timestamp.to_be_bytes().to_vec();
         for val in &[self.label(), self.value()] {

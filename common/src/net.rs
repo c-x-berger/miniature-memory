@@ -27,7 +27,7 @@ pub trait Network: Sized {
     /// implementation on `bytes`, so it may be wise to first copy `bytes`.
     ///
     /// [`Read`]: https://doc.rust-lang.org/std/io/trait.Read.html
-    fn from_networking<'a>(bytes: &'a [u8]) -> Result<Self, NetErr>;
+    fn from_networking(bytes: &[u8]) -> Result<Self, NetErr>;
 }
 
 impl Network for UpdateMessage {

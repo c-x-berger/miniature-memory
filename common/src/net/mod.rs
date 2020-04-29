@@ -85,7 +85,7 @@ impl Network for UpdateMessage {
             return Err(NetErr::NotEnoughData);
         }
         value_v = vec![];
-        bytes.read(&mut value_v)?;
+        bytes.read_to_end(&mut value_v)?;
 
         let label: String = String::from_utf8(label_v)?;
         let value: String = String::from_utf8(value_v)?;

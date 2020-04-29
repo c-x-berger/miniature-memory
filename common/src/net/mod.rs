@@ -41,13 +41,13 @@ impl Network for UpdateMessage {
         // keys provide nice slice views but signatures -- which are larger -- don't
         buf.extend_from_slice(self.key()?.as_bytes());
         buf.extend_from_slice(&self.signature()?.to_bytes());
-        // includes big-endian timestamp, label_s, label, value_s, value
+        // includes big-endian timestamp, label_s, label, value
         buf.extend_from_slice(&self.as_message());
         return Ok(buf);
     }
 
     fn from_networking(mut bytes: &[u8]) -> Result<Self, NetErr> {
-        if bytes.len() < 107 {
+        if bytes.len() < 106 {
             return Err(NetErr::NotEnoughData);
         }
         let mut version: [u8; 1] = [0];
@@ -67,7 +67,6 @@ impl Network for UpdateMessage {
         println!("read timestamp of {}", timestamp);
         // alloc/declare buffers for label and size
         let mut label_s: [u8; 1] = [0];
-        let mut value_s: [u8; 1] = [0];
         let mut label_v: Vec<u8>;
         let mut value_v: Vec<u8>;
         // read label/value
@@ -85,13 +84,8 @@ impl Network for UpdateMessage {
             println!("label_v has {} items, {:?}", label_v.len(), label_v);
             return Err(NetErr::NotEnoughData);
         }
-        bytes.read_exact(&mut value_s)?;
-        let size = u8::from_be_bytes(value_s).try_into().unwrap();
-        value_v = vec![0; size];
-        let read_size = bytes.read(&mut value_v)?;
-        if read_size < size {
-            return Err(NetErr::NotEnoughData);
-        }
+        value_v = vec![];
+        bytes.read(&mut value_v)?;
 
         let label: String = String::from_utf8(label_v)?;
         let value: String = String::from_utf8(value_v)?;
@@ -104,7 +98,6 @@ impl Network for UpdateMessage {
             Some(key),
             Some(sig),
         )?;
-        // we have to return a box because something something memory safety
         Ok(ret)
     }
 }

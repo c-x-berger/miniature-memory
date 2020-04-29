@@ -22,7 +22,7 @@ impl UpdateMessage {
         key: Option<PublicKey>,
         signature: Option<Signature>,
     ) -> Result<Self, ()> {
-        if label.len() > 256 || value.len() > 256 {
+        if label.len() > 256 {
             return Err(());
         }
         Ok(Self {
@@ -38,22 +38,20 @@ impl UpdateMessage {
     /// Returns this message as it should have been serialized prior to signing.
     pub fn as_message(&self) -> Vec<u8> {
         let mut to_sign: Vec<u8> = self.timestamp.to_be_bytes().to_vec();
-        for val in &[self.label(), self.value()] {
-            let len: u8 = val.len().try_into().unwrap();
-            to_sign.extend_from_slice(&len.to_be_bytes());
-            to_sign.extend(val.bytes());
-        }
+        let len: u8 = self.label().len().try_into().unwrap();
+        to_sign.push(len.to_be());
+        to_sign.extend(self.label().bytes());
+        to_sign.extend(self.value().bytes());
         return to_sign;
     }
 
     /// Sets this message's public key and signs it with the provided keypair.
     pub fn sign(&mut self, key: &Keypair) {
-        let pub_key = key.public;
-        self.public_key = Some(pub_key);
         let to_sign = &self.as_message();
         let sign = key.sign(to_sign);
         assert!(key.verify(to_sign, &sign).is_ok());
         self.signature = Some(sign);
+        self.public_key = Some(key.public);
     }
 
     /// Checks if this update is validly signed.

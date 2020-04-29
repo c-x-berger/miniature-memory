@@ -6,7 +6,7 @@ use std::{
 
 use common::{Network, UpdateMessage};
 
-const ACCEPTED_PROTO_VERSION: u8 = 6;
+const ACCEPTED_PROTO_VERSION: u8 = 66;
 
 fn main() {
     println!("Hello, world!");
@@ -42,6 +42,15 @@ fn handle(mut client: TcpStream) -> io::Result<()> {
             rec_msg.label(),
             rec_msg.value()
         );
+    } else {
+        println!("bad signature!");
+        if rec_msg.key().is_some() {
+            println!("  - key is present");
+        }
+        if rec_msg.signature().is_some() {
+            println!("  - signature present");
+        }
+        println!("label: {}\nvalue: {}", rec_msg.label(), rec_msg.value());
     }
     return Ok(());
 }

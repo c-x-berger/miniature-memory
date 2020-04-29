@@ -47,7 +47,7 @@ fn main() -> Result<(), io::Error> {
                 println!("writing new key");
                 let out = File::create(&opt.keypath)?;
                 let mut writer = io::BufWriter::new(out);
-                writer.write(&key.to_bytes())?;
+                writer.write_all(&key.to_bytes())?;
             }
             key
         }
@@ -76,7 +76,7 @@ fn main() -> Result<(), io::Error> {
         "connected to {}:{}, trying to send message...",
         opt.server, opt.port
     );
-    stream.write(&update.networking_bytes()?)?;
+    stream.write_all(&update.networking_bytes()?)?;
 
     Ok(())
 }

@@ -52,7 +52,7 @@ fn handle(mut client: TcpStream) -> io::Result<()> {
         }
         println!("label: {}\nvalue: {}", rec_msg.label(), rec_msg.value());
     }
-    return Ok(());
+    Ok(())
 }
 
 fn mainloop() -> io::Result<()> {

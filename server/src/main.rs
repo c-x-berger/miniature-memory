@@ -4,10 +4,12 @@ use std::{fs::File, io, io::BufReader, path::PathBuf, sync::Arc};
 
 use common::{Network, UpdateMessage};
 use dashmap::DashMap;
+use futures::{future::FutureExt, select_biased, stream::StreamExt};
 use structopt::StructOpt;
 use tokio::{
     net::{TcpListener, TcpStream},
     prelude::*,
+    signal::unix::{signal, SignalKind},
 };
 
 mod database;
@@ -43,12 +45,20 @@ async fn main() -> io::Result<()> {
     let db = Database::new(base);
     let db = Arc::new(db);
     println!("Binding to localhost:1515");
-    let mut listener = TcpListener::bind("0.0.0.0:1515").await?;
+    let mut stream = signal(SignalKind::interrupt()).unwrap().fuse();
+    let mut listener = TcpListener::bind("0.0.0.0:1515").await?.fuse();
     loop {
-        let (socket, _addr) = listener.accept().await?;
-        let db_handle = db.clone();
-        tokio::spawn(async move { handle(socket, db_handle).await });
+        let conn = select_biased! {
+            x = listener.next() => x,
+            _ = stream.next() => break,
+        };
+        if let Some(result) = conn {
+            let stream = result?;
+            let clone = db.clone();
+            tokio::spawn(async move { handle(stream, clone).await });
+        }
     }
+    Ok(())
 }
 
 async fn handle(mut client: TcpStream, db: Arc<Database>) -> io::Result<()> {

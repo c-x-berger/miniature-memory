@@ -1,16 +1,19 @@
 #![feature(try_trait)]
 
-use std::{fs::File, io, io::BufReader, path::PathBuf, sync::Arc};
+use std::{
+    fs::File,
+    io,
+    io::{BufReader, Read},
+    net::{TcpListener, TcpStream},
+    os::unix::net::UnixStream,
+    path::PathBuf,
+    sync::Arc,
+    thread,
+};
 
 use common::{Network, UpdateMessage};
 use dashmap::DashMap;
-use futures::{future::FutureExt, select_biased, stream::StreamExt};
 use structopt::StructOpt;
-use tokio::{
-    net::{TcpListener, TcpStream},
-    prelude::*,
-    signal::unix::{signal, SignalKind},
-};
 
 mod database;
 use database::{Database, Record};
@@ -23,8 +26,7 @@ struct Options {
     db_file: PathBuf,
 }
 
-#[tokio::main]
-async fn main() -> io::Result<()> {
+fn main() -> io::Result<()> {
     println!("Hello, world!");
     let opts = Options::from_args();
     println!("Loading database from {:?}...", opts.db_file);
@@ -44,28 +46,30 @@ async fn main() -> io::Result<()> {
     };
     let db = Database::new(base);
     let db = Arc::new(db);
-    println!("Binding to localhost:1515");
-    let mut stream = signal(SignalKind::interrupt()).unwrap().fuse();
-    let mut listener = TcpListener::bind("0.0.0.0:1515").await?.fuse();
-    loop {
-        let conn = select_biased! {
-            x = listener.next() => x,
-            _ = stream.next() => break,
-        };
-        if let Some(result) = conn {
-            let stream = result?;
-            let clone = db.clone();
-            tokio::spawn(async move { handle(stream, clone).await });
+    let worked_db = db.clone();
+    thread::spawn(move || {
+        println!("Binding to localhost:1515");
+        let listener = TcpListener::bind("0.0.0.0:1515").unwrap();
+        for stream in listener.incoming() {
+            let stream = stream.unwrap();
+            let db_handle = worked_db.clone();
+            thread::spawn(move || handle(stream, db_handle));
         }
-    }
+    });
+    println!("creating SIGINT handler...");
+    let (mut read, write) = UnixStream::pair()?;
+    signal_hook::pipe::register(signal_hook::SIGINT, write)?;
+    let mut buf = [0];
+    read.read_exact(&mut buf)?;
+    println!("happy shutdown!");
     Ok(())
 }
 
-async fn handle(mut client: TcpStream, db: Arc<Database>) -> io::Result<()> {
+fn handle(mut client: TcpStream, db: Arc<Database>) -> io::Result<()> {
     println!("handling new connection");
     println!("start parsing message");
     let mut buf: Vec<u8> = Vec::new();
-    client.read_to_end(&mut buf).await?;
+    client.read_to_end(&mut buf)?;
     let message = UpdateMessage::from_networking(&mut buf)?;
     assert_eq!(message.version(), ACCEPTED_PROTO_VERSION);
     println!(

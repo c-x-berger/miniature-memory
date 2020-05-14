@@ -44,8 +44,7 @@ fn main() -> io::Result<()> {
             base
         }
     };
-    let db = Database::new(base);
-    let db = Arc::new(db);
+    let db = Arc::new(Database::new(base));
     let worked_db = db.clone();
     thread::spawn(move || {
         println!("Binding to localhost:1515");
@@ -70,7 +69,7 @@ fn handle(mut client: TcpStream, db: Arc<Database>) -> io::Result<()> {
     println!("start parsing message");
     let mut buf: Vec<u8> = Vec::new();
     client.read_to_end(&mut buf)?;
-    let message = UpdateMessage::from_networking(&mut buf)?;
+    let message = UpdateMessage::from_networking(&buf)?;
     assert_eq!(message.version(), ACCEPTED_PROTO_VERSION);
     println!(
         "read update message complete!\n- timestamp: {}\n- label: {}\n- value: {}",

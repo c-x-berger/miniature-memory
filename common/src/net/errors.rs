@@ -44,18 +44,18 @@ impl From<FromUtf8Error> for NetErr {
 
 impl From<io::Error> for NetErr {
     fn from(error: io::Error) -> Self {
-        return match error.kind() {
+        match error.kind() {
             io::ErrorKind::UnexpectedEof => NetErr::NotEnoughData,
             _ => NetErr::MalformedData,
-        };
+        }
     }
 }
 
 impl From<NetErr> for io::Error {
     fn from(e: NetErr) -> Self {
-        return io::Error::new(
+        io::Error::new(
             io::ErrorKind::Other,
             format!("NetErr raised from common: {:?}", e),
-        );
+        )
     }
 }

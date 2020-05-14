@@ -2,8 +2,8 @@
 
 use std::{fs::File, io, io::BufReader, path::PathBuf, sync::Arc};
 
+use common::{Network, UpdateMessage};
 use dashmap::DashMap;
-use ed25519_dalek::{PublicKey, Signature};
 use structopt::StructOpt;
 use tokio::{
     net::{TcpListener, TcpStream},
@@ -50,50 +50,18 @@ async fn main() -> io::Result<()> {
     }
 }
 
-fn invalid_data(reason: &str) -> io::Error {
-    io::Error::new(io::ErrorKind::InvalidData, reason)
-}
-
 async fn handle(mut client: TcpStream, db: Arc<database::Database>) -> io::Result<()> {
     println!("handling new connection");
     println!("start parsing message");
-    let version = client.read_u8().await?;
-    println!("message version: {}", version);
-    if version != ACCEPTED_PROTO_VERSION {
-        return Err(invalid_data("wrong proto version!"));
-    }
-    // TODO: check version
-    let mut key_bytes: [u8; 32] = [0; 32];
-    let mut sig_bytes: [u8; 64] = [0; 64];
-    client.read_exact(&mut key_bytes).await?;
-    client.read_exact(&mut sig_bytes).await?;
-    let key = PublicKey::from_bytes(&key_bytes);
-    let sig = Signature::from_bytes(&sig_bytes);
-    if key.is_err() || sig.is_err() {
-        return Err(invalid_data("error parsing key/sig"));
-    }
-    // 50 bytes seems a reasonable, but arbitrarty prealloc
-    let mut remaining_buf: Vec<u8> = Vec::with_capacity(50);
-    client.read_to_end(&mut remaining_buf).await?;
-    match key.unwrap().verify(&remaining_buf, &sig.unwrap()) {
-        Ok(()) => {}
-        Err(_) => return Err(invalid_data("signature broken!")),
-    };
-    let mut remaining = remaining_buf.as_slice();
-    // shh, nobody tell tokio
-    let timestamp = remaining.read_u64().await?;
-    let label_len = remaining.read_u8().await?;
-    let mut label: Vec<u8> = vec![0; usize::from(label_len)];
-    remaining.read_exact(&mut label).await?;
-    let label = match String::from_utf8(label) {
-        Ok(s) => s,
-        Err(_) => return Err(invalid_data("label is not valid UTF-8")),
-    };
-    let mut value = String::new();
-    remaining.read_to_string(&mut value).await?;
+    let mut buf: Vec<u8> = Vec::new();
+    client.read_to_end(&mut buf).await?;
+    let message = UpdateMessage::from_networking(&mut buf)?;
+    assert_eq!(message.version(), ACCEPTED_PROTO_VERSION);
     println!(
         "read update message complete!\n- timestamp: {}\n- label: {}\n- value: {}",
-        timestamp, label, value
+        message.timestamp(),
+        message.label(),
+        message.value()
     );
     Ok(())
 }

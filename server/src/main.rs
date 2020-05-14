@@ -11,6 +11,7 @@ use tokio::{
 };
 
 mod database;
+use database::{Database, Record};
 
 const ACCEPTED_PROTO_VERSION: u8 = 66;
 
@@ -39,7 +40,7 @@ async fn main() -> io::Result<()> {
             base
         }
     };
-    let db = database::Database::new(base);
+    let db = Database::new(base);
     let db = Arc::new(db);
     println!("Binding to localhost:1515");
     let mut listener = TcpListener::bind("0.0.0.0:1515").await?;
@@ -50,7 +51,7 @@ async fn main() -> io::Result<()> {
     }
 }
 
-async fn handle(mut client: TcpStream, db: Arc<database::Database>) -> io::Result<()> {
+async fn handle(mut client: TcpStream, db: Arc<Database>) -> io::Result<()> {
     println!("handling new connection");
     println!("start parsing message");
     let mut buf: Vec<u8> = Vec::new();
@@ -63,5 +64,13 @@ async fn handle(mut client: TcpStream, db: Arc<database::Database>) -> io::Resul
         message.label(),
         message.value()
     );
+    if message.correct_signature().is_err() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "Signature broken",
+        ));
+    }
+    let label = String::from(message.label());
+    db.add_record(&label, Record::from(message));
     Ok(())
 }

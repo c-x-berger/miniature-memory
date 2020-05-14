@@ -1,5 +1,6 @@
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
 
+use common::UpdateMessage;
 use dashmap::DashMap;
 use ed25519_dalek::{PublicKey, Signature};
 use serde::{Deserialize, Serialize};
@@ -49,28 +50,12 @@ pub struct Record {
 }
 
 impl Record {
-    pub fn new(
-        timestamp: u64,
-        value: String,
-        owner: PublicKey,
-        signature: Signature,
-        label: Option<&str>,
-    ) -> Result<Self, ()> {
-        let ret = Record {
+    pub fn new(timestamp: u64, value: String, owner: PublicKey, signature: Signature) -> Self {
+        Record {
             timestamp,
             value,
             owner,
             signature,
-        };
-        match label {
-            None => Ok(ret),
-            Some(l) => {
-                if ret.check_signature(l).is_ok() {
-                    Ok(ret)
-                } else {
-                    Err(())
-                }
-            }
         }
     }
 
@@ -89,5 +74,16 @@ impl Record {
                 Err(_) => Err(()),
             }
         }
+    }
+}
+
+impl From<UpdateMessage> for Record {
+    fn from(message: UpdateMessage) -> Self {
+        Self::new(
+            message.timestamp(),
+            String::from(message.value()),
+            *message.key(),
+            *message.signature(),
+        )
     }
 }

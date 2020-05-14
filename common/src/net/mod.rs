@@ -1,4 +1,4 @@
-use std::{convert::TryInto, io::Read};
+use std::io::Read;
 
 use ed25519_dalek::{PublicKey, Signature, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH};
 
@@ -68,13 +68,10 @@ impl Network for UpdateMessage {
         // read label/value
         // read size
         bytes.read_exact(&mut label_s)?;
-        let size = u8::from_be_bytes(label_s).try_into().unwrap();
+        let size = usize::from(u8::from_be_bytes(label_s));
         // attempt to read `size` bytes to buffer
-        // I'm fairly confident that a u8 fits into a usize
         label_v = vec![0; size];
-        let read_size = bytes
-            .read(label_v.as_mut_slice())
-            .expect("could not read into label_v");
+        let read_size = bytes.read(label_v.as_mut_slice())?;
         if read_size < size {
             println!("Not enough data! {} < {}", read_size, size);
             println!("label_v has {} items, {:?}", label_v.len(), label_v);

@@ -32,22 +32,18 @@ pub trait Network: Sized {
 
 impl Network for UpdateMessage {
     fn networking_bytes(&self) -> Result<Vec<u8>, NetErr> {
-        if !self.is_signed() {
-            return Err(NetErr::BytesNotReady);
-        }
-        let mut buf = Vec::<u8>::new();
-        // when sending over network, big endian is standard for some reason
+        let mut buf: Vec<u8> = Vec::new();
         buf.extend_from_slice(&self.version().to_be_bytes());
         // keys provide nice slice views but signatures -- which are larger -- don't
-        buf.extend_from_slice(self.key()?.as_bytes());
-        buf.extend_from_slice(&self.signature()?.to_bytes());
+        buf.extend_from_slice(self.key().as_bytes());
+        buf.extend_from_slice(&self.signature().to_bytes());
         // includes big-endian timestamp, label_s, label, value
         buf.extend_from_slice(&self.as_message());
-        return Ok(buf);
+        Ok(buf)
     }
 
     fn from_networking(mut bytes: &[u8]) -> Result<Self, NetErr> {
-        if bytes.len() < 106 {
+        if bytes.len() < 108 {
             return Err(NetErr::NotEnoughData);
         }
         let mut version: [u8; 1] = [0];
@@ -95,8 +91,8 @@ impl Network for UpdateMessage {
             timestamp,
             label,
             value,
-            Some(key),
-            Some(sig),
+            key,
+            sig,
         )?)
     }
 }

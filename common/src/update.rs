@@ -1,13 +1,13 @@
 use std::{convert::TryInto, option::NoneError};
 
-use ed25519_dalek::{Keypair, PublicKey, Signature};
+use ed25519_dalek::{Keypair, PublicKey, Signature, SignatureError};
 
 /// Update message structure. Layout from http://wiki.ucis.nl/MARC
 #[derive(Debug, PartialEq, Eq)]
 pub struct UpdateMessage {
     version: u8,
-    public_key: Option<PublicKey>,
-    signature: Option<Signature>,
+    key: PublicKey,
+    signature: Signature,
     /// We will store this number as the target's native endianness, and to_be it in networking
     timestamp: u64,
     label: String,
@@ -20,8 +20,8 @@ impl UpdateMessage {
         timestamp: u64,
         label: String,
         value: String,
-        key: Option<PublicKey>,
-        signature: Option<Signature>,
+        key: PublicKey,
+        signature: Signature,
     ) -> Result<Self, ()> {
         if label.len() > 256 {
             return Err(());
@@ -31,7 +31,7 @@ impl UpdateMessage {
             timestamp,
             label,
             value,
-            public_key: key,
+            key,
             signature,
         })
     }
@@ -51,39 +51,29 @@ impl UpdateMessage {
         let to_sign = &self.as_message();
         let sign = key.sign(to_sign);
         assert!(key.verify(to_sign, &sign).is_ok());
-        self.signature = Some(sign);
-        self.public_key = Some(key.public);
+        self.signature = sign;
+        self.key = key.public;
     }
 
     /// Checks if this update is validly signed.
     ///
-    /// - If: `self.key().is_some()` and `self.signature().is_some()`:
-    ///   - If `signature` is valid for `self.as_message()` and `key`:
-    ///     - Return `Ok(true)`
-    ///   - Else: Return `Ok(false)`
-    /// - Else: return NoneError
-    pub fn correct_signature(&self) -> Result<bool, NoneError> {
-        match self.signature() {
-            Some(signature) => {
-                return match self.key() {
-                    Some(key) => Ok(key.verify(&self.as_message(), &signature).is_ok()),
-                    None => Err(NoneError),
-                }
-            }
-            None => Err(NoneError),
-        }
+    /// - If `signature` is valid for `self.as_message()` and `key`:
+    ///   - Return `Ok(true)`
+    /// - Else: Return `Ok(false)`
+    pub fn correct_signature(&self) -> Result<(), SignatureError> {
+        self.key().verify(&self.as_message(), &self.signature)
     }
 
     pub fn version(&self) -> u8 {
         self.version
     }
 
-    pub fn key(&self) -> Option<PublicKey> {
-        self.public_key
+    pub fn key(&self) -> &PublicKey {
+        &self.key
     }
 
-    pub fn signature(&self) -> Option<Signature> {
-        self.signature
+    pub fn signature(&self) -> &Signature {
+        &self.signature
     }
 
     pub fn timestamp(&self) -> u64 {
@@ -96,12 +86,5 @@ impl UpdateMessage {
 
     pub fn value(&self) -> &str {
         &self.value
-    }
-
-    /// Return `true` if a signature is **present.** To check correctness, see [`correct_signature`].
-    ///
-    /// [`correct_signature`]: struct.UpdateMessage.html#method.correct_signature
-    pub fn is_signed(&self) -> bool {
-        return self.signature.is_some();
     }
 }

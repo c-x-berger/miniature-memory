@@ -37,7 +37,7 @@ impl Network for UpdateMessage {
         }
         let mut buf = Vec::<u8>::new();
         // when sending over network, big endian is standard for some reason
-        buf.extend_from_slice(&u8::to_be_bytes(self.version()));
+        buf.extend_from_slice(&self.version().to_be_bytes());
         // keys provide nice slice views but signatures -- which are larger -- don't
         buf.extend_from_slice(self.key()?.as_bytes());
         buf.extend_from_slice(&self.signature()?.to_bytes());
@@ -90,14 +90,13 @@ impl Network for UpdateMessage {
         let label: String = String::from_utf8(label_v)?;
         let value: String = String::from_utf8(value_v)?;
 
-        let ret = UpdateMessage::new(
+        Ok(UpdateMessage::new(
             u8::from_be_bytes(version),
             timestamp,
             label,
             value,
             Some(key),
             Some(sig),
-        )?;
-        Ok(ret)
+        )?)
     }
 }

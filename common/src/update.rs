@@ -3,6 +3,7 @@ use std::{convert::TryInto, option::NoneError};
 use ed25519_dalek::{Keypair, PublicKey, Signature};
 
 /// Update message structure. Layout from http://wiki.ucis.nl/MARC
+#[derive(Debug, PartialEq, Eq)]
 pub struct UpdateMessage {
     version: u8,
     public_key: Option<PublicKey>,

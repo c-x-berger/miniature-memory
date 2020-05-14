@@ -1,5 +1,7 @@
 use std::convert::TryFrom;
 
+use common::Network;
+
 pub enum Response {
     OkResponse,
     BadMessage(String),
@@ -30,3 +32,5 @@ impl UpdateResponse {
         Self { version, status }
     }
 }
+
+impl Network for UpdateResponse {}

@@ -1,4 +1,4 @@
-use std::{convert::TryInto, option::NoneError};
+use std::convert::TryInto;
 
 use ed25519_dalek::{Keypair, PublicKey, Signature, SignatureError};
 
@@ -36,14 +36,18 @@ impl UpdateMessage {
         })
     }
 
+    pub fn bytes_to_sign(timestamp: u64, label: &str, value: &str) -> Vec<u8> {
+        let mut bytes: Vec<u8> = timestamp.to_be_bytes().to_vec();
+        let len: u8 = label.len().try_into().unwrap();
+        bytes.push(len.to_be());
+        bytes.extend(label.bytes());
+        bytes.extend(value.bytes());
+        bytes
+    }
+
     /// Returns this message as it should have been serialized prior to signing.
     pub fn as_message(&self) -> Vec<u8> {
-        let mut to_sign: Vec<u8> = self.timestamp.to_be_bytes().to_vec();
-        let len: u8 = self.label().len().try_into().unwrap();
-        to_sign.push(len.to_be());
-        to_sign.extend(self.label().bytes());
-        to_sign.extend(self.value().bytes());
-        return to_sign;
+        Self::bytes_to_sign(self.timestamp, self.label(), self.value())
     }
 
     /// Sets this message's public key and signs it with the provided keypair.

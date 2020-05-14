@@ -58,15 +58,11 @@ fn main() -> Result<(), io::Error> {
     let nix_time = start.duration_since(UNIX_EPOCH).expect("fuck timezones");
 
     println!("creating and signing update...");
-    let mut update = UpdateMessage::new(
-        66,
-        nix_time.as_secs(),
-        "test.spoon".to_string(),
-        "localhost".to_string(),
-        None,
-        None,
-    )
-    .unwrap();
+    let time = nix_time.as_secs();
+    let label = String::from("test.spoon");
+    let value = String::from("localhost");
+    let signature = keypair.sign(&UpdateMessage::bytes_to_sign(time, &label, &value));
+    let mut update = UpdateMessage::new(66, time, label, value, keypair.public, signature).unwrap();
     update.sign(&keypair);
 
     // we'll just assume they gave a real IP:port set

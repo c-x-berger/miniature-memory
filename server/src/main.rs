@@ -61,6 +61,7 @@ fn main() -> io::Result<()> {
     let mut buf = [0];
     read.read_exact(&mut buf)?;
     println!("happy shutdown!");
+    println!("the database has {} entries", db.records().len());
     Ok(())
 }
 

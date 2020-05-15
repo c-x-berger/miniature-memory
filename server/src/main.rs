@@ -3,7 +3,7 @@
 use std::{
     fs::File,
     io,
-    io::{BufReader, Read},
+    io::{BufReader, ErrorKind, Read},
     net::SocketAddr,
     path::PathBuf,
     sync::{mpsc, mpsc::TryRecvError, Arc},
@@ -73,7 +73,12 @@ fn main() -> io::Result<()> {
     let mut slab = Slab::new();
     // main event loop
     'main: loop {
-        poll.poll(&mut events, None)?;
+        match poll.poll(&mut events, None) {
+            Err(e) if e.kind() == ErrorKind::Interrupted => {
+                poll.poll(&mut events, None)?;
+            }
+            _ => {}
+        }
         for event in &events {
             match event.token() {
                 SERVER => loop {

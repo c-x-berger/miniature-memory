@@ -1,5 +1,4 @@
 #![feature(try_trait)]
-#![feature(duration_constants)]
 
 use std::{
     fs::File,
@@ -9,7 +8,6 @@ use std::{
     path::PathBuf,
     sync::{mpsc, mpsc::TryRecvError, Arc},
     thread,
-    time::Duration,
 };
 
 use common::{Network, UpdateMessage};

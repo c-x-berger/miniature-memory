@@ -9,10 +9,12 @@ edition = "2018"
 [dependencies]
 common = { path = "../common" }
 dashmap = { version = "4.0.0-rc2", features = ["serde"] }
-structopt = "0.3"
+mio = { version = "0.7", features = ["os-poll", "tcp"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-signal-hook = "0.1.15"
+signal-hook = { version = "0.1.15", features = ["mio-0_7-support"] }
+slab = "0.4"
+structopt = "0.3"
 
 [dependencies.ed25519-dalek]
 version = "1.0.0-pre.3"

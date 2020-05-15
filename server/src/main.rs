@@ -16,7 +16,7 @@ use common::{Network, UpdateMessage};
 use dashmap::DashMap;
 use mio::{
     net::{TcpListener, TcpStream},
-    Events, Interest, Poll, Token,
+    Events, Interest, Poll, Token, Waker,
 };
 use signal_hook::iterator::Signals;
 use slab::Slab;
@@ -68,22 +68,26 @@ fn main() -> io::Result<()> {
     const SERVER: Token = Token(1);
     poll.registry()
         .register(&mut listener, SERVER, Interest::READABLE)?;
-    // create slab
+    // set up Waker
+    const WAKER: Token = Token(2);
+    let waker = Arc::new(Waker::new(poll.registry(), WAKER)?);
+    // create slab of threads
     let mut slab = Slab::new();
     // main event loop
     'main: loop {
-        poll.poll(&mut events, Some(Duration::MILLISECOND))?;
-        let reap_slab = events.is_empty();
+        poll.poll(&mut events, None)?;
         for event in &events {
             match event.token() {
                 SERVER => loop {
                     match listener.accept() {
                         Ok((conn, _addr)) => {
                             let clone = db.clone();
+                            let w_clone = waker.clone();
                             let (tx, rx) = mpsc::channel::<()>();
                             let handle = thread::spawn(move || -> io::Result<()> {
                                 handle(conn, clone)?;
-                                std::mem::drop(tx);
+                                w_clone.wake()?;
+                                tx.send(()).expect("main hung up on child");
                                 Ok(())
                             });
                             slab.insert((rx, handle));
@@ -101,16 +105,16 @@ fn main() -> io::Result<()> {
                     }
                     break 'main;
                 }
+                WAKER => {
+                    // Since this goes over the entire slab, we don't need to add our own loop
+                    slab.retain(|_, val| match val.0.try_recv() {
+                        Ok(_) => false,
+                        Err(e) if e == TryRecvError::Disconnected => false,
+                        _ => true,
+                    });
+                }
                 Token(_) => {}
             }
-        }
-        if reap_slab {
-            // Reap space from slab
-            slab.retain(|_key, val| match val.0.try_recv() {
-                Ok(_) => unreachable!(),
-                Err(_e @ TryRecvError::Disconnected) => false,
-                Err(_e @ TryRecvError::Empty) => true,
-            });
         }
     }
     Ok(())

@@ -88,7 +88,7 @@ fn main() -> io::Result<()> {
                             let w_clone = waker.clone();
                             let (tx, rx) = mpsc::channel::<()>();
                             let handle = thread::spawn(move || -> io::Result<()> {
-                                handle(conn, clone)?;
+                                handle(&conn, clone)?;
                                 w_clone.wake()?;
                                 tx.send(()).expect("main hung up on child");
                                 Ok(())
@@ -123,7 +123,7 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
-fn handle(mut client: TcpStream, db: Arc<Database>) -> io::Result<()> {
+fn handle(mut client: &TcpStream, db: Arc<Database>) -> io::Result<()> {
     println!("handling new connection");
     println!("start parsing message");
     let mut buf: Vec<u8> = Vec::new();
